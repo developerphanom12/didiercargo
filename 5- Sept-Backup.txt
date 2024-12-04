@@ -1,0 +1,283 @@
+// Working HIT SWITCH API AND ADD TO CART THE PRODUCT AND REMOVE
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .product { margin-bottom: 20px; }
+    .product-info { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    .checkbox-container { margin-bottom: 20px; }
+    #cart-confirmation {
+      display: none; /* Initially hidden */
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #e0f7e9;
+      border: 1px solid #4CAF50;
+      border-radius: 5px;
+      color: #4CAF50;
+    }
+    /* Style for switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0;
+      right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #4CAF50;
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+  </style>
+</head>
+<body>
+
+    <div class="product-section">
+        <div class="slider"></div>
+    </div>
+    <div id="product-container">80</div>
+
+    <!-- Switch for hitting API and adding/removing product to/from cart -->
+    <label class="switch">
+      <input type="checkbox" id="api-switch">
+      <span class="slider"></span>
+    </label>
+    <span>Enable Insurance</span>
+
+    <script>
+        let variantId = null;
+
+        // Event listener for the switch to handle both API hit, cart addition, and cart removal
+        document.getElementById('api-switch').addEventListener('change', function() {
+          const switchEnabled = this.checked;
+
+          if (switchEnabled) {
+            // If switch is ON, hit the API and add to cart
+            fetch("/apps/proxy/product")
+              .then(response => {
+                if (response.ok) {
+                  return response.json(); // Convert response to JSON
+                } else {
+                  console.error("Failed to hit API:", response.statusText);
+                }
+              })
+              .then(data => {
+                if (data && data.status === 200) {
+                  console.log("API responded with 200 OK");
+                  const fullVariantId = data.data.id; // e.g., "gid://shopify/ProductVariant/44174097219749"
+                  variantId = fullVariantId.split('/').pop(); // Extract the numeric ID
+                  console.log("Extracted Variant ID:", variantId);
+
+                  // Add product to cart after successful API call
+                  addProductToCart(variantId);
+                }
+              })
+              .catch(error => console.error("Error:", error));
+          } else {
+            // If switch is OFF, remove the product from the cart
+            if (variantId) {
+              removeProductFromCart(variantId);
+            }
+          }
+        });
+
+        // Function to add the product to the cart
+        function addProductToCart(variantId) {
+          fetch('/cart/add.js', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              items: [{
+                id: variantId, // Use the numeric ID here
+                quantity: 1
+              }]
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data && data.status === 'error') {
+              console.error("Error adding product to cart:", data.message);
+            } else {
+              console.log("Product added to cart successfully");
+            }
+          })
+          .catch(error => console.error("Error adding product to cart:", error));
+        }
+
+        // Function to remove the product from the cart
+        function removeProductFromCart(variantId) {
+          fetch('/cart/change.js', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              id: variantId, // Use the numeric ID here
+              quantity: 0 // Setting quantity to 0 removes the item from the cart
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data && data.status === 'error') {
+              console.error("Error removing product from cart:", data.message);
+            } else {
+              console.log("Product removed from cart successfully");
+              variantId = null; // Reset the variantId once removed
+            }
+          })
+          .catch(error => console.error("Error removing product from cart:", error));
+        }
+
+        // Debugging: Ensure the switch is present in the DOM
+        console.log('Switch Button:', document.getElementById('api-switch'));
+    </script>
+</body>
+</html>
+//
+
+
+//PrICE
+app.get("/product", async (req, res) => {
+  try {
+    const shopName = "productinsight-review.myshopify.com";
+    const accessToken = "shpua_b073306ebe6368bada0ea8d5c6a994a7";
+    const productName = req.query.name || 'Protection'; // Get product name from query parameter
+
+    // Fetch product details
+    const query = `
+      {
+        products(first: 150, query: "title:*${productName}*") {
+          edges {
+            node {
+              id
+              title
+              images(first: 1) {
+                edges {
+                  node {
+                    src
+                  }
+                }
+              }
+              variants(first: 1) {
+                edges {
+                  node {
+                    id  
+                    price
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await axios.post(
+      `https://${shopName}/admin/api/graphql.json`,
+      { query },
+      {
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+        }
+      }
+    );
+
+    const products = response.data.data.products.edges.map((edge) => {
+      const product = edge.node;
+      return {
+        id: product.variants.edges.length > 0 ? product.variants.edges[0].node.id : null,
+        title: product.title,
+        image: product.images.edges.length > 0 ? product.images.edges[0].node.src : null,
+        price: product.variants.edges.length > 0 ? product.variants.edges[0].node.price : null,
+        productId: product.id // Add product ID to use in variant creation
+      };
+    });
+
+    // If products exist, create variants for the first product
+    if (products.length > 0) {
+      const product = products[0]; // Use the first product
+      console.log("Product found:", product);
+
+      // Mutation query to create a new variant with "Continue selling when out of stock" enabled
+      const createVariantMutation = `
+        mutation {
+          productVariantCreate(input: {
+            productId: "${product.productId}",
+            price: "20.5", 
+            options: ["Insurance #003"],
+            inventoryPolicy: CONTINUE
+          }) {
+            productVariant {
+              id
+              title
+              price
+              inventoryPolicy
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `;
+
+      const variantResponse = await axios.post(
+        `https://${shopName}/admin/api/graphql.json`,
+        { query: createVariantMutation },
+        {
+          headers: {
+            "X-Shopify-Access-Token": accessToken,
+          }
+        }
+      );
+
+      // Check if there were any errors in the mutation response
+      if (variantResponse.data.errors) {
+        console.error("GraphQL errors:", variantResponse.data.errors);
+        return res.status(500).json({ success: false, error: "Error creating variant" });
+      }
+
+      const newVariant = variantResponse.data.data?.productVariantCreate?.productVariant;
+      if (newVariant) {
+        console.log("New variant created:", newVariant);
+        return res.status(200).json({ status: 200, data: newVariant });
+      } else {
+        console.error("Failed to create variant");
+        return res.status(500).json({ success: false, error: "Failed to create variant" });
+      }
+    } else {
+      console.log("No products found for the specified name.");
+      return res.status(404).json({ success: false, error: "No products found" });
+    }
+
+  } catch (error) {
+    console.error("Error fetching products or creating variant:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});

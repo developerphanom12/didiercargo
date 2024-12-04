@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+</head>
+<body>
+<!-- Product Price Display -->
+<p id="product-price" data-original-price="{{ product.price | money_without_currency }}">
+  <span id="display-price">{{ product.price | money }}</span>
+</p>
+
+<!-- Checkbox for Extra Price -->
+<label>
+  
+  <input type="checkbox" id="extra-price-checkbox">
+  Add extra feature ($10.00)
+</label>
+
+<!-- Hidden Input Field for Extra Price -->
+<input type="hidden" id="extra-price" value="10.00">
+
+<!-- Add to Cart Button -->
+<button id="add-to-cart-btn">Add to Cart</button>
+<!-- Buy Now Button -->
+<button id="buy-now-btn">Buy Now</button>
+
+  {{ product.id | json }}<br>
+  {{ product.title | json }}
+  
+
+</body>
+
+
+<!-- JavaScript -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const extraPriceCheckbox = document.getElementById('extra-price-checkbox');
+    const extraPriceInput = document.getElementById('extra-price');
+    const displayPriceElement = document.getElementById('display-price');
+    const productPriceElement = document.getElementById('product-price');
+    const originalPrice = parseFloat(productPriceElement.getAttribute('data-original-price'));
+
+    // Function to update displayed price
+    function updateDisplayedPrice() {
+      const extraPrice = extraPriceCheckbox.checked ? parseFloat(extraPriceInput.value) : 0;
+      const newPrice = originalPrice + extraPrice;
+      displayPriceElement.innerHTML = Shopify.formatMoney(newPrice * 100, Shopify.money_format);
+    }
+
+    // Event listener for checkbox change
+    extraPriceCheckbox.addEventListener('change', function() {
+      updateDisplayedPrice();
+    });
+
+    // Initialize price display
+    updateDisplayedPrice();
+
+    // Buy Now Button Handler
+    document.getElementById('buy-now-btn').addEventListener('click', function() {
+      const extraPrice = parseFloat(extraPriceInput.value);
+      const variantId = {{ product.variants.first.id }}; // Use the variant ID of the product
+      
+      // Add the product to the cart with the extra price as a property
+      fetch('/cart/add.js', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: [{
+            id: variantId,
+            quantity: 1,
+            properties: {
+              'Extra Feature': extraPrice > 0 ? `$${extraPrice.toFixed(2)}` : 'None'
+            }
+          }]
+        }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Item added to cart:', data);
+        // Redirect to checkout
+        window.location.href = '/checkout';
+      })
+      .catch(error => {
+        console.error('Error adding item to cart:', error);
+      });
+    });
+  });
+
+  // Shopify formatMoney function for displaying prices
+  Shopify.formatMoney = function(cents, format) {
+    var money_format = format || '${{ amount }}';
+    var value = (cents / 100.0).toFixed(2);
+    return money_format.replace('{{ amount }}', value);
+  };
+
+  Shopify.money_format = '${{ amount }}'; // Example format, adjust according to your store's format
+</script>
+<!-- Optional CSS -->
+<style>
+  #product-price {
+    font-size: 1.5em;
+    font-weight: bold;
+  }
+
+  #extra-price-checkbox {
+    margin-right: 10px;
+  }
+
+  #buy-now-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+  }
+
+  #buy-now-btn:hover {
+    background-color: #0056b3;
+  }
+</style>
+</html>

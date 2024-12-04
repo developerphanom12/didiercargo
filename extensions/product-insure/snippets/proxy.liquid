@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+</head>
+<body>
+
+  <div id="product-container">24</div>
+  <div id="product-list" class="container"></div>
+
+  {{ product.id | json }}<br>
+  {{ product.title | json }}
+  
+
+</body>
+<script>
+  // Function to fetch product data
+  const currentProductId = '{{ product.id | json }}';
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/apps/proxy/update');
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const result = await response.json();
+      renderProducts(result.data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  // Function to render products
+  const renderProducts = (products) => {
+    const container = document.getElementById('product-list');
+    container.innerHTML = ''; // Clear existing content
+
+    products.forEach(product => {
+      const productElement = document.createElement('div');
+      productElement.className = 'product';
+      productElement.innerHTML = `
+        <div class="product-info">
+          <p>ID-Changed: ${product.id}</p>
+          <p>Title: ${product.title}</p>
+          <p>Increased Price: ₹${product.increasedPrice}</p>
+        </div>
+      `;
+      container.appendChild(productElement);
+    });
+
+    // Display the first product as an example
+    if (products.length > 0) {
+      displayCurrentProduct(products[0]); // Display the first product, or change logic as needed
+    }
+  };
+
+  // Function to display the current product ID and title
+  const displayCurrentProduct = (product) => {
+    const container = document.getElementById('product-container');
+    container.innerHTML = `
+      <h1>Tile: ${product.title}</h1>
+      <p>ID-Fixed: ${product.id}</p>
+    `;
+  };
+
+  // Fetch products when the page loads
+  fetchProducts();
+</script>
+
+
+<!-- Optional CSS -->
+<style>
+  #product-price {
+    font-size: 1.5em;
+    font-weight: bold;
+  }
+
+  #extra-price-checkbox {
+    margin-right: 10px;
+  }
+
+  #add-to-cart-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+  }
+
+  #add-to-cart-btn:hover {
+    background-color: #0056b3;
+  }
+</style>
+</html>

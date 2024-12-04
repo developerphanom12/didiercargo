@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .product { margin-bottom: 20px; }
+    .product-info { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    .checkbox-container { margin-bottom: 20px; }
+    #add-to-cart-button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px 2px;
+      cursor: pointer;
+    }
+    #cart-confirmation {
+      display: none; /* Initially hidden */
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #e0f7e9;
+      border: 1px solid #4CAF50;
+      border-radius: 5px;
+      color: #4CAF50;
+    }
+  </style>
+</head>
+<body>
+
+    <div class="product-section">
+        <div class="slider"></div>
+    </div>
+    <div id="product-container">801</div>
+
+    <!-- Hit API Button -->
+    <button id="hit-api-button">Get Insurance</button>
+    <!-- Add to Cart Button -->
+    <button id="add-to-cart-button">Add to Cart</button>
+
+    <script>
+        // Your JavaScript code for handling the buttons
+        variantId = null;
+
+        document.getElementById("hit-api-button").addEventListener("click", function() {
+          fetch("/apps/proxy/product")
+            .then(response => {
+              if (response.ok) {
+                return response.json(); // Convert response to JSON
+              } else {
+                console.error("Failed to hit API:", response.statusText);
+              }
+            })
+            .then(data => {
+              if (data && data.status === 200) {
+                console.log("API responded with 200 OK");
+                const fullVariantId = data.data.id; // e.g., "gid://shopify/ProductVariant/44174097219749"
+                const variantId = fullVariantId.split('/').pop(); // Extract the numeric ID from the returned gid
+                console.log("Extracted Variant ID:", variantId);
+
+                // Add event listener to the "Add to Cart" button after fetching variant data
+                document.getElementById('add-to-cart-button').addEventListener('click', function() {
+                  addProductToCart(variantId);
+                });
+              }
+            })
+            .catch(error => console.error("Error:", error));
+        });
+
+        // Function to add the product to the cart
+        function addProductToCart(variantId) {
+  fetch('/cart/add.js', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      items: [{
+        id: variantId, // Use the numeric ID here
+        quantity: 1
+      }]
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data && data.status === 'error') {
+      console.error("Error adding product to cart:", data.message);
+    } else {
+      console.log("Product added to cart successfully");
+    }
+  })
+  .catch(error => console.error("Error adding product to cart:", error));
+}
+
+
+        // Debugging: Ensure the "Add to Cart" button is present in the DOM
+        console.log('Add to Cart Button:', document.getElementById('add-to-cart-button'));
+    </script>
+</body>
+</html>

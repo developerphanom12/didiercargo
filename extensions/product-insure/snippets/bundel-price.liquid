@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      .shipping-protection-section {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .shipping-protection-box {
+        display: flex;
+        align-items: center;
+        border: 2px solid #00704a;
+        border-radius: 12px;
+        padding: 15px;
+        width: 500px;
+        background-color: #f9f9f9;
+      }
+
+      .protection-icon {
+        margin-right: 20px;
+      }
+
+      .protection-icon img {
+        width: 50px;
+        height: 50px;
+      }
+
+      .protection-details h3 {
+        font-size: 16px;
+        margin: 0;
+        font-weight: bold;
+      }
+
+      .protection-details p {
+        font-size: 12px;
+        color: #555;
+        margin-top: 5px;
+      }
+
+      .protection-toggle {
+        margin-left: auto;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 20px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: '';
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider {
+        background-color: #00704a;
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+
+      .cart-subtotal {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shipping-protection-section" id="protectionDetails">
+      <div class="shipping-protection-box">
+        <div class="protection-icon">
+        </div>
+        <div class="protection-details">
+          <h3>
+            Shipping Protection from <br>
+            Damage, Loss & Theft
+          </h3>
+          <p>By deselecting shipping protection, we are not liable for lost, damaged, or stolen items</p>
+        </div>
+        <div class="protection-toggle">
+          <label class="switch">
+            <input type="checkbox" id="toggleProtection">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="cart-subtotal">
+      <p>
+        Subtotal: <span id="subtotal">{{ cart.total_price | money }}</span>
+      </p>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const toggleProtectionCheckbox = document.getElementById('toggleProtection');
+        const LOCAL_STORAGE_KEY = 'shippingProtectionEnabled';
+        const INSURANCE_VARIANT_ID_KEY = 'insuranceVariantId';
+        const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (savedState === 'true') {
+          toggleProtectionCheckbox.checked = true;
+        }
+
+        toggleProtectionCheckbox.addEventListener('change', function () {
+          if (this.checked) {
+            localStorage.setItem(LOCAL_STORAGE_KEY, 'true');
+            addShippingProtection();
+          } else {
+            localStorage.setItem(LOCAL_STORAGE_KEY, 'false'); 
+            removeShippingProtection();
+          }
+        });
+
+
+
+        async function fetchInsuranceStatus() {
+    try {
+      const shopname =  '{{shop.domain}}';
+      const response = await fetch(`/apps/proxy/insuractivefetch?shopname=${shopname}`);
+      const data = await response.json();
+      const activaaaateValue = data.data[0].activate; 
+
+console.log("sdjksdjkkjsd",data,activaaaateValue)
+
+      if (data.status === 200 && data.data.length > 0) {
+        const activateValue = data.data[0].activate; 
+
+        const protectionDetails = document.getElementById('protectionDetails');
+        const toggleProtection = document.getElementById('toggleProtection');
+
+        if (activateValue === 1) {
+          protectionDetails.style.display = 'block'; 
+          toggleProtection.checked = true; 
+        } else {
+          protectionDetails.style.display = 'none';
+          toggleProtection.checked = false; 
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching insurance status:', error);
+    }
+  }
+  window.onload = fetchInsuranceStatus;
+
+
+
+        function addShippingProtection() {
+          const subtotalText = document.getElementById('subtotal').innerText;
+
+          const cleanedText = 20;
+          const subtotalAmount = parseFloat(cleanedText);
+
+         
+
+          if (!isNaN(subtotalAmount)) {
+            const protectionPrice = (subtotalAmount * 0.1).toFixed(2); 
+
+            fetch('/cart.js')
+              .then((response) => response.json())
+              .then((cartData) => {
+                const productIdsInCart = cartData.items.map((item) => item.id);
+                console.log('ice:', productIdsInCart);
+                const store =  '{{shop.domain}}';
+
+                const requestBody = {
+                  title: 'Shipping Insurance Product',
+                  price: protectionPrice,
+                  product_ids: productIdsInCart,
+                  shopName : store
+
+                };
+
+                fetch('/apps/proxy/product', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(requestBody),
+                })
+                  .then((response) => response.json())
+                  .then((data) => {
+                    if (data && data.status === 200 && data.data && data.data.id) {
+                      const insuranceVariantId = data.data.id.split('/').pop();
+                      localStorage.setItem(INSURANCE_VARIANT_ID_KEY, insuranceVariantId);
+                      addProductToCart(insuranceVariantId);
+                    } else {
+                      console.error(
+                        'Error creating product or missing variant ID:',
+                        data.message || 'No product ID found.'
+                      );
+                    }
+                  })
+                  .catch((error) => console.error('Error:', error));
+              })
+              .catch((error) => console.error('Error fetching cart data:', error));
+          } else {
+            console.error('Failed to convert subtotal to a number.');
+          }
+        }
+
+        function addProductToCart(insuranceId) {
+          const items = [{ id: insuranceId, quantity: 1 }];
+
+          fetch('/cart/add.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data && data.status === 'error') {
+                console.error('Error adding product to cart:', data.message);
+              } else {
+                console.log('Product added to cart successfully');
+                // window.location.href = '/cart';
+              }
+            })
+            .catch((error) => console.error('Error adding product to cart:', error));
+        }
+
+        function removeShippingProtection() {
+          insuranceId = localStorage.getItem(INSURANCE_VARIANT_ID_KEY);
+          if (!insuranceId) return;
+          fetch('/cart/change.js', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: insuranceId,
+              quantity: 0,
+            }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data && data.status === 'error') {
+                console.error('Error removing product from cart:', data.message);
+              } else {
+                console.log('Product removed from cart successfully');
+                insuranceId = null;
+                localStorage.removeItem('insuranceCreated');
+                localStorage.removeItem('insuranceId');
+              }
+            })
+            .catch((error) => console.error('Error removing product from cart:', error));
+        }
+      });
+
+    </script>
+  </body>
+</html>

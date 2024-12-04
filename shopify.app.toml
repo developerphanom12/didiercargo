@@ -1,0 +1,34 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "4c96242a17827b79e8774fd1a36a5ae7"
+name = "Courier App"
+handle = "courier-app-12"
+application_url = "https://early-jm-mandatory-chuck.trycloudflare.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "app-testing-account1122.myshopify.com"
+include_config_on_deploy = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_cart_transforms,read_checkouts,read_content,read_inventory,read_orders,read_price_rules,read_product_listings,read_products,read_script_tags,write_cart_transforms,write_checkouts,write_content,write_draft_orders,write_inventory,write_orders,write_price_rules,write_products,write_script_tags"
+
+[auth]
+redirect_urls = [
+  "https://early-jm-mandatory-chuck.trycloudflare.com/auth/callback",
+  "https://early-jm-mandatory-chuck.trycloudflare.com/auth/shopify/callback",
+  "https://early-jm-mandatory-chuck.trycloudflare.com/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-07"
+
+[app_proxy]
+url = "https://early-jm-mandatory-chuck.trycloudflare.com"
+subpath = "proxy"
+prefix = "apps"
+
+[pos]
+embedded = false
